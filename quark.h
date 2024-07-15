@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/04 16:57:43 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/14 22:00:22 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/15 15:27:42 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,19 +23,14 @@ typedef union u_name
 	char *const	n;
 }	t_name;
 
-///>How do Quarks hold together?
-///	I know not.  Wishes, maybe?	~~lgasc 2024-07-03 17:22
+///>>How do Quarks hold together?
+///>I know not.  Wishes, maybe?	~~lgasc 2024-07-03 17:22
 enum e_quark
 {
 	Quark_SimpleText,
 	Quark_Variable,
 	Quark_Status
 };
-typedef struct s_quark_id
-{
-	enum e_quark	type;
-	size_t			cost;
-}	t_quid;
 typedef const struct s_quark
 {
 	const enum e_quark	type;
@@ -45,6 +40,7 @@ typedef const struct s_quark
 		const t_name		variable;
 	};
 }	t_quark;
+
 ///`StatusParameter` has no visible value in
 ///	the `union` as it is a unitary marker.
 ///`simple_text` may be the empty string ({'\0'}) and thus have a `cost` of `0`.
@@ -55,6 +51,14 @@ typedef const struct s_wish
 	const t_quark	quark;
 	size_t			cost;
 }				t_wish;
+t_wish	ft_wish(const char *const text)
+		__attribute__	((nonnull, warn_unused_result));
+
+typedef struct s_quark_id
+{
+	enum e_quark	type;
+	size_t			cost;
+}	t_quid;
 
 typedef struct s_slice
 {

@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/13 19:42:43 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/15 00:11:09 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/15 17:39:15 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,24 +24,18 @@
 //static void		ft_cleanup(void);
 static void		ft_copy_into(
 					char *destination, const char *source, size_t length);
-static t_param_expansible	ft_double_quote(
-								const char *text, const size_t length)
-				__attribute__	((nonnull, warn_unused_result));
+static t_param_expansible	ft_double_quote(const char *text)
+							__attribute__	((nonnull, warn_unused_result));
 //static bool	ft_single_quote(char **const string, const char* text, size_t *i
 //					) __attribute__	((warn_unused_result, nonnull ( 3 , 2 ) ) );
 static char		*ft_single_quote(const char *const text)
 				__attribute__	((nonnull, warn_unused_result));
-static t_wish	ft_wish(const char *const text)
-				__attribute__	((nonnull, warn_unused_result));
-static void		ft_0spring(t_spring spring);
-static void		ft_0expansible(t_param_expansible expansible);
-static void		ft_0string(const char *string);
-static void		ft_0name(t_name name);
-static void		ft_znoop(size_t size);
-static void		ft_0size(size_t size);
-static size_t	ft__single_quote_cost(void)	__attribute__ ((alias ("ft_find")));
-static size_t	ft___plain_text_cost(void) __attribute__ ((warn_unused_result));
-static char		*ft_plain_text(void)	__attribute__	((warn_unused_result));
+//static void		ft_0expansible(t_param_expansible expansible);
+//static void		ft_0quark(t_quark quark);
+//static void		ft_0string(const char *string) __attribute__ ((alias ("free")));
+//static void		ft_0name(t_name name);
+static size_t	ft__single_quote_cost(void)
+				__attribute__ ((alias ("ft_find"), warn_unused_result));
 
 /*__attribute__ ((nonnull))
 t_bond	*ft_atomise(const char *const text)
@@ -170,6 +164,29 @@ t_bond	*ft_atomise(const char *const text)
 	if (error == true)
 		return (ft_cleanup());
 }*/
+///The `text` parameter shall point to the
+///	first (non-blank) character of the atom.
+t_atom	ft_atom(const char *const text)
+{
+	if (text [0] == '|')
+		return ((t_atom){Atom_Pipe, NEVER});
+	else if (text [0] == '<' && text [1] == '<')
+		ft_here_document(text + 2 + ft_span(text + 2, BLANK));
+	else if (text [0] == '<')
+		(t_atom)
+		{Atom_InputRedirection, ft_core(text + 1 + ft_span(text + 1, BLANK))};
+	else if (text [0] == '>' && text [1] == '>')
+		(t_atom){Atom_AppendingRedirection,
+		ft_core(text + 2 + ft_span(text + 2, BLANK))};
+	else if (text [0] == '>')
+		(t_atom)
+		{Atom_OutputRedirection, ft_core(text + 1 + ft_span(text + 1, BLANK))};
+	else
+		ft_core(text);
+}
+///A `Particle_PlainText` may have a `cost` of 0, this is no error.
+///	In this case, the `plain_text` shall be the `""` empty string literal.
+///		Remember, you shall not `free` a string literal!
 ///TODO: Separate: There should be a separate function to count the cost.
 static t_particle	ft_particle(const char *const text)
 {
@@ -177,18 +194,21 @@ static t_particle	ft_particle(const char *const text)
 		return ((t_particle){Particle_SingleQuote,
 			{ft_single_quote(text + 1)}, ft__single_quote_cost()});
 	else if (text [0] == '"')
-		return ((t_particle){Particle_DoubleQuote,
-			.double_quote = ft_double_quote(text + 1, ft_find(text, "\""))});
+		return ((t_particle){Particle_DoubleQuote, .double_quote
+			= ft_double_quote(text + 1//, ft_find(text,"\"")
+			)});
 	else if (text [0] == '$' && text [1] == '?')
 		return ((t_particle){Particle_StatusParameter, {NEVER}, 2});
 	else if (text [0] == '$' && (ft_isalpha(text [1]) || text [1] == '_'))
-		ft_variable((t_slice){text + 1, ft_quark_id(text).cost - 1});
-	//else
+		ft_variable
+		((t_slice){text + 1, 1 + ft_span(text + 2, CAPITAL "_" SMALL)});
 	//!Including `text [0] == '\0' | '\t' | '\n' | ' '`:
 	//!	plain text may have a length of zero.
+	else if (text [0] == '\0' || ft_span(text, "\t\n <>|") > 0)
+		return ((t_particle){Particle_PlainText, {""}, 0});
 	//!Also if `text [0] == '$' && text [1] != 'A-Z' | 'a-z' | '_'`
-	return ((t_particle)
-		{Particle_PlainText, {ft_plain_text()}, ft___plain_text_cost()});
+	return ((t_particle){Particle_PlainText, {ft_plain_text
+		((t_slice){text, ft_find(text, "\"$'" META)})}, ft_find(text, "\"$'" META)});
 }
 //__attribute__ ((alias ("ft_find")))
 //static size_t	ft__single_quote_cost();
@@ -291,78 +311,53 @@ static void	ft_copy_into(char *const restrict destination,
 	destination [i] = '\0';
 }
 
+
+///The `text` parameter shall point _after_ the `'"'` opening double quote.
 ///As a mean of error propagation, `expansible.simple_text`
 ///	and `expansible.variable` may be `NULL`.
 ///TODO: Separate: There should be a separate function to count the cost.
-static t_param_expansible	ft_double_quote(
-	const char *const text, const size_t length)
+static t_param_expansible	ft_double_quote(const char *const text)
 {
 	const t_wish					wish = ft_wish(text);
 	const t_param_expansible		double_quote = ft_param_expansible(wish);
-	const t_param_expansible *const	next = ft_next();
+	//const t_param_expansible *const	next; //= ft_next();
 
-	if (wish.type == Quark_SimpleText && wish.cost == 0)
-		return ((t_spring){double_quote, 0});
-	ft_probe(text + wish.cost);
+	//if (wish.quark.type == Quark_SimpleText && wish.cost == 0)
+	//	return ((t_spring){double_quote, 0});
+	//ft_probe(text + wish.cost);
 	//next = ft_double_quote(text + wish.cost, length - wish.cost);
-	if (next.cost == 0)
-		return (ft_0spring(next), (t_spring){double_quote, wish.cost});
+	//if (next.cost == 0)
+	//	return (ft_0spring(next), (t_spring){double_quote, wish.cost});
 	//double_quote.next = next.expansible;
-	return ((t_spring){{double_quote, next.expansible}, wish.cost + next.cost});
+	//return ((t_spring)
+	//	{{double_quote, next.expansible}, wish.quark.cost + next.cost});
+	return (double_quote);
 }
 
-///On error, `simple_text` and `variable` will be `NULL`.
-///It is no error for `simple_text` to have a length of `0`.
-static t_wish	ft_wish(const char *const text)
-{
-	const t_quid	quid = ft_quark_id(text);
+//void	ft_0expansible(const t_param_expansible expansible)
+//{
+//	ft_0quark(expansible.quark);
+//	if (expansible.next != (t_param_expansible *){NULL})
+//		(ft_0expansible(*expansible.next), free((t_param_expansible *const)
+//				(const t_param_expansible *const){expansible.next}));
+//}
 
-	if (quid.type == Quark_SimpleText)
-		return ((t_wish){Quark_SimpleText,
-		{ft_simple_text(text, quid.length)}, quid.length});
-	if (quid.type == Quark_Variable)
-		return ((t_wish){Quark_Variable,
-		{ft_variable(text + 1, quid.length - 1)}, quid.length});
-	if (quid.type == Quark_Status)
-		return ((t_wish){Quark_Status, VOID, quid.length});
-}
-
-void	ft_0spring(const t_spring spring)
-{
-	ft_0expansible(spring.expansible);
-	ft_0size(spring.cost);
-}
-void	ft_0expansible(const t_param_expansible expansible)
-{
-	if (expansible.type == Quark_SimpleText
-		&& expansible.simple_text != (char *){NULL})
-		ft_0string(expansible.simple_text);
-	else if (expansible.type == Quark_Variable)
-		ft_0name(expansible.name);
-	else if (expansible.type == Quark_Status)
-		ft_noop();
-	if (expansible.next != (t_param_expansible *){NULL})
-		(ft_0expansible(expansible.next),
-			free((t_param_expansible *){expansible.next}));
-}
-__attribute__	((alias ("free")))
-void	ft_0string(const char *const string);
+//static void	ft_0quark(const t_quark quark)
+//{
+//	if (quark.type == Quark_SimpleText)
+//		ft_0string(quark.simple_text);
+//	else if (quark.type == Quark_Status)
+//		ft_noop();
+//	else if (quark.type == Quark_Variable)
+//		ft_0name(quark.variable);
+//}
 //{free((char *){string});}
-void	ft_0name(const t_name name)
-{
-	if (name.n != (char *){NULL})
-		ft_0string(name.n);
-}
-void	ft_znoop(const size_t size)
-{
-}
-__attribute__	((alias	("ft_znoop")))
-void	ft_0size(const size_t size);
-//{ft_noop();}
-void	ft_probe(const char *const text)
-{
-	ft_quark_id(text);
-}
+
+//void	ft_0name(const t_name name)
+//{
+//	if (name.n != (char *){NULL})
+//		ft_0string(name.n);
+//}
 
 //\///If the allocation fails, the return is `NULL`
 //static char	*ft_single_quote(const char *const text, size_t *const i)

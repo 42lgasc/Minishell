@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/08 17:56:14 by lgasc             #+#    #+#             */
-/*   Updated: 2024/06/13 20:31:17 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/15 16:59:52 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,7 @@ int	main(void)
 		//	ft_shell_expansion__filename_expansion_and_commands_and_arguments(),
 		//	ft_redirect__rm_redirection_operator_from_arg_list(), ft_execute(),
 		//	ft_optionally_wait_completion__collect_exit_status());
-		ft_atomise(line);
+		ft_parse(line);
 		free(ft_unconst(line));
 	}
 }

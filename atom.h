@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/15 12:07:26 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/14 20:57:00 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/15 17:33:24 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,12 +38,7 @@ typedef bool	t_fail;
 ///`simple_text` and `variable` will be `NULL` on error.
 typedef struct s_expansible
 {
-	const enum e_quark					type;
-	union
-	{
-		char *const		simple_text;
-		const t_name	variable;
-	};
+	const t_quark						quark;
 	const struct s_expansible *const	next;
 }	t_param_expansible;
 typedef struct s_spring
@@ -61,9 +56,9 @@ enum e_here_document
 };
 ///No need to store the closing delimiter.
 ///The `word` of the `Quotesome` type is the aftermath of Quote Removal.
-///	Remember, Quote Removal also apply to `\` Escape
-///		Characters and "glue quotes" (such as in `AB'CD'EF`
-///		and`''ABC''DEF''`, both equivalent to `ABCDEF`).
+///	Remember, Quote Removal also apply the `\` Escape
+///		Character and "glue quotes" (such as in `AB'CD'EF`
+///		and `''ABC''DEF''`, both equivalent to `ABCDEF`).
 ///	TODO: Should the word of `<<''` have for representation
 ///		a `NULL` pointer or an `&'\0'` empty string?
 typedef struct s_here_document
@@ -97,12 +92,11 @@ typedef struct s_particle
 	};
 	const size_t			cost;
 }				t_particle;
-//typedef struct s_slice
-//{
-//	t_particle		particle;
-//	struct s_slice	*next;
-//}				t_slice;
-typedef t_slice	*t_core __attribute__	((deprecated));
+typedef struct s_core
+{
+	t_particle		particle;
+	struct s_core	*next;
+}	t_core;
 
 enum e_atom
 {
@@ -133,20 +127,20 @@ enum e_atom
 ///		for the scope of this "minishell" project.
 ///`Blank`, `Pipe`, and `StatusParameter` have no visible
 ///	value in the `union` as they are unitary markers.
-typedef struct s_atom
+typedef const struct s_atom
 {
-	enum e_atom	type;
-	union
+	const enum e_atom	type;
+	const union
 	{
 		//char				*plain_text;
 		//char				*single_quote;
 		//t_param_expansible	*double_quote;
 		//t_name				variable;
-		t_slice				*field;
-		t_slice				*input_redirection;
-		t_slice				*output_redirection;
-		t_here_document		here_document;
-		t_param_expansible	appending_redirection;
+		const t_core			field;
+		const t_core			input_redirection;
+		const t_core			output_redirection;
+		const t_core			appending_redirection;
+		const t_here_document	here_document;
 	};
 }				t_atom;
 typedef struct s_bond

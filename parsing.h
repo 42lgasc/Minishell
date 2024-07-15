@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/13 20:26:03 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/03 16:58:06 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/15 17:00:23 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,5 +16,5 @@
 # include "atom.h"
 
 typedef t_bond	*t_molecule;
-t_molecule	ft_atomise(const char *text);
+t_molecule	ft_parse(const char *text);
 #endif

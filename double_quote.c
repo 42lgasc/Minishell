@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/19 20:59:45 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/14 22:54:24 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/15 15:03:12 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,7 @@ bool	ft_is_at_end(const size_t start, const size_t i, const char *const text)
 	return (false);
 }
 
+///The `text` parameter shall point _after_ the opening `'"'` double quote.
 ///The `cost` is the amount of characters which represents
 ///	a quark; The amount of meaningful characters may
 ///	be lesser due to affix markers such as `'$'`.
@@ -59,7 +60,7 @@ t_quid	ft_quark_id(const char *const text)
 }
 
 __attribute__	((nonnull, restrict, warn_unused_result))
-bool	ft_simple_text(t_PEN **const pen, size_t const start,
+bool	ft_plain_text(t_PEN **const pen, size_t const start,
 	size_t const i, const char *const text)
 {
 	*pen = (t_PEN *){malloc(sizeof * (t_PEN *){*pen})};
@@ -75,7 +76,7 @@ bool	ft_simple_text(t_PEN **const pen, size_t const start,
 
 ///Returns: A strind (with maybe zero length), or `NULL` on allocation error
 __attribute__	((nonnull, warn_unused_result))
-char	*ft_simple_text(const char *const text, const size_t length)
+char	*ft_plain_text(const t_slice slice)
 {
 	char *const	simple
 		= (char *){malloc((length + 1) * sizeof * (char *){simple})};
@@ -156,16 +157,20 @@ t_name	ft_variable(//const char *const name, const size_t length
 	return (variable);
 }
 
+///The `text` parameter shall point _after_ the `'"'` opening double quote.
 ///Shall an error occur, `simple_text` or `variable.n` will be `NULL`.
-///It is not an error for `simple_text` to have a length of `0`.
-///Naturally, `next` being `NULL` means the end is met.
+///	As of now, `next` would then also be `NULL`.
+///It is not an error for `simple_text` to have a length of `0`:
+///	This is one of the ways to mark the end.
 t_param_expansible	ft_param_expansible(const t_wish wish)
 {
-	const t_wish	wish = ft_wish();
+	const t_wish	wish = ft_wish(text);
 
 	if ((wish.type == Quark_SimpleText && wish.simple_text == (char *){NULL})
 		|| wish.type == Quark_Variable && wish.variable.n == (char *){NULL})
-		return ((t_param_expansible){wish.quark, NULL};
+		return ((t_param_expansible){wish.quark, NULL});
+	if (wish.type = Quark_SimpleText && wish.cost == 0)
+		return ((t_param_expansible){wish.quark, NULL});
 	if (wish.type == Quark_SimpleText)
 		double_quote = (t_param_expansible)
 		{Quark_SimpleText, {wish.simple_text}, ft_next()};
@@ -204,4 +209,23 @@ static t_param_expansible	*ft_next(
 		return (
 			ft_0wish(wish), ft_0expansible(next), (t_param_expansible *){NULL});
 	return (next);
+}
+
+///The `text` parameter shall point _after_ the `'"'` opening double quote.
+///On error, `simple_text` and `variable` will be `NULL`.
+///It is no error for `simple_text` to have a length of `0`.
+///TODO: Separate: There should be different functions for
+///	identifying type, counting cost, and assembling the structure.
+t_wish	ft_wish(const char *const text)
+{
+	const t_quid	quid = ft_quark_id(text);
+
+	if (quid.type == Quark_SimpleText)
+		return ((t_wish){Quark_SimpleText,
+		{ft_plain_text(text, quid.length)}, quid.length});
+	if (quid.type == Quark_Variable)
+		return ((t_wish){Quark_Variable,
+		{ft_variable(text + 1, quid.length - 1)}, quid.length});
+	if (quid.type == Quark_Status)
+		return ((t_wish){Quark_Status, VOID, quid.length});
 }
