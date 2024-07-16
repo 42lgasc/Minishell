@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/19 20:59:45 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/15 15:03:12 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/16 21:55:17 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -158,7 +158,7 @@ t_name	ft_variable(//const char *const name, const size_t length
 }
 
 ///The `text` parameter shall point _after_ the `'"'` opening double quote.
-///Shall an error occur, `simple_text` or `variable.n` will be `NULL`.
+///Shall an error occur, `simple_text` will be `NULL`.
 ///	As of now, `next` would then also be `NULL`.
 ///It is not an error for `simple_text` to have a length of `0`:
 ///	This is one of the ways to mark the end.
@@ -168,17 +168,18 @@ t_param_expansible	ft_param_expansible(const t_wish wish)
 
 	if ((wish.type == Quark_SimpleText && wish.simple_text == (char *){NULL})
 		|| wish.type == Quark_Variable && wish.variable.n == (char *){NULL})
-		return ((t_param_expansible){wish.quark, NULL});
+		return ((t_param_expansible){{Quark_SimpleText, .simple_text = (char *){NULL}}, NULL});
 	if (wish.type = Quark_SimpleText && wish.cost == 0)
 		return ((t_param_expansible){wish.quark, NULL});
 	if (wish.type == Quark_SimpleText)
-		double_quote = (t_param_expansible)
-		{Quark_SimpleText, {wish.simple_text}, ft_next()};
+		double_quote = (t_param_expansible){wish.quark, ft_next()};
 	else if (wish.type == Quark_Variable)
-		double_quote = (t_param_expansible)
-		{Quark_Variable, .variable = wish.variable, ft_next()};
+		double_quote = (t_param_expansible){wish.quark, ft_next()};
 	else if (wish.type == Quark_Status)
 		double_quote = (t_param_expansible){Quark_Status, NEVER, ft_next()};
+	if (double_quote.next == (t_param_expansible *){NULL})
+		return (ft_0wish(wish), (t_param_expansible)
+			{{Quark_SimpleText, .simple_text = (char *){NULL}}});
 }
 
 ///Returns `NULL` on allocation error.

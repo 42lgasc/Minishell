@@ -6,19 +6,12 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/19 21:00:19 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/15 17:02:30 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/15 18:37:19 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef DOUBLE_QUOTE_H
 # define DOUBLE_QUOTE_H
-
-# define	CAPITAL		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-# define	SMALL		"abcdefghijklmnopqrstuvwxyz"
-# define	NO_PLAIN	"\"$'"
-// As the `bash` manual states.
-// XXX: There is yet a requirement to not support some of such characters.
-# define	META		" \t\n|<>"	//" \t\n|&;()<>"
 
 # include "quark.h"
 

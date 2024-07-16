@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/13 19:42:43 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/15 17:39:15 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/16 22:21:38 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,19 @@
 #include "atom.h"
 #include "double_quote.h"
 
+static t_heredc	ft_here_document(const char *text)
+				__attribute__	((nonnull,	warn_unused_result));
+static size_t	ft_here_word_length(const char *s)
+				__attribute__	((nonnull,	warn_unused_result));
+static t_core	ft_core(const char *text)
+				__attribute__	((alias	("ft_particle_node"),	deprecated));
+static t_partnd	ft_partnd(const char *text)
+				__attribute__	((alias	("ft_particle_node")));
+static t_partnd	ft_particle_node(const char *text)	__attribute__	((nonnull));
+static size_t	ft__particle_cost(const char *s)
+				__attribute__	((nonnull,	warn_unused_result));
+static t_particle	ft_particle(const char *s)
+					__attribute__	((nonnull,	warn_unused_result));
 //static t_fail	ft_ready(t_cursor *const cursor, enum e_cursor depth)
 //				__attribute__		((warn_unused_result));
 //static void		ft_cleanup(void);
@@ -164,26 +177,126 @@ t_bond	*ft_atomise(const char *const text)
 	if (error == true)
 		return (ft_cleanup());
 }*/
+
 ///The `text` parameter shall point to the
 ///	first (non-blank) character of the atom.
-t_atom	ft_atom(const char *const text)
+///The `here_document.word` shall be `NULL` on allocation error.
+static t_atom	ft_atom(const char *const text)
 {
-	if (text [0] == '|')
-		return ((t_atom){Atom_Pipe, NEVER});
-	else if (text [0] == '<' && text [1] == '<')
-		ft_here_document(text + 2 + ft_span(text + 2, BLANK));
-	else if (text [0] == '<')
-		(t_atom)
-		{Atom_InputRedirection, ft_core(text + 1 + ft_span(text + 1, BLANK))};
-	else if (text [0] == '>' && text [1] == '>')
-		(t_atom){Atom_AppendingRedirection,
-		ft_core(text + 2 + ft_span(text + 2, BLANK))};
-	else if (text [0] == '>')
-		(t_atom)
-		{Atom_OutputRedirection, ft_core(text + 1 + ft_span(text + 1, BLANK))};
+	const char *const	ti = text;
+
+	if (*ti == '|')
+		return ((t_atom){Atom_Pipe, .error = false});
+	else if (*ti == '<' && ti [1] == '<')
+		return ((t_atom){Atom_HereDocument, .here_document
+			///FIXME: `strspn`/`ft_span` UB when all match
+			= ft_here_document(ti + 2 + ft_span(ti + 2, BLANK))});
+	else if (*ti == '<')
+		return ((t_atom){Atom_InputRedirection,
+			///FIXME: `strspn`/`ft_span` UB when all match
+			.input_redirection = ft_partnd(ti + 1 + ft_span(ti + 1, BLANK))});
+	else if (*ti == '>' && ti [1] == '>')
+		return ((t_atom){Atom_AppendingRedirection, .appending_redirection
+			///FIXME: `strspn`/`ft_span` UB when all match
+			= ft_partnd(ti + 2 + ft_span(ti + 2, BLANK))});
+	else if (*ti == '>')
+		return ((t_atom){Atom_OutputRedirection,
+			///FIXME: `strspn`/`ft_span` UB when all match
+			.output_redirection = ft_partnd(ti + 1 + ft_span(ti + 1, BLANK))});
 	else
-		ft_core(text);
+		return ((t_atom){Atom_Field, .field = ft_partnd(ti)});
 }
+
+///The `delimiter` may be the empty string. (It then matches an empty line.)
+///For the scope of this `minishell` project, there
+///	is no support for the `'\\'` Escape Character.
+///Returns `NULL` on allocation error.
+static t_heredc	ft_here_document(const char *const text)
+{
+	char *const				word = (char *)
+	{malloc((ft_here_word_length(text) + 1) * sizeof * (char *){word})};
+	enum e_here_document	quote;
+	const char				*ti;
+	char					*wi;
+
+	if (word == (char *){NULL})
+		return ((t_heredc){-1, NULL});
+	quote = HereDocument_Quoteless;
+	ti = text;
+	wi = word;
+	while (*ti != '\0' && ! ft_strchr(META, *ti))
+		//if (text [0] == '\\') {quote = true; ...} else
+		if (quote == HereDocument_Quoteless && (*ti == '"' || *ti == '\''))
+			quote = HereDocument_Quotesome;
+	else if (*ti == '"')
+		while (*++ ti != '\0' && (*ti != '"' || (++ ti, false)))
+			*wi ++ = *ti;
+	else if (*ti == '\'')
+		while (*++ ti != '\0' && (*ti != '\'' || (++ ti, false)))
+			*wi ++ = *ti;
+	else
+		while (*ti != '\0' && ! ft_strchr("\"'" META, *ti))
+			*wi ++ = *ti ++;
+	*wi = '\0';
+	return ((t_heredc){quote, word});
+}
+
+static size_t	ft_here_word_length(const char *const s)
+{
+	size_t		length;
+	const char	*si;
+
+	length = 0;
+	si = s;
+	while (*si != '\0' && ! ft_strchr("\"'" META, *si))
+		if (*si == '"')
+			while (*++ si != '\0' && (*si != '"' || (++ si, false)))
+				++ length;
+		else if (*si == '\'')
+			while (*++ si != '\0' && (*si != '\'' || (++ si, false)))
+				++ length;
+		else
+			while (*si != '\0' && ! ft_strchr("\"'" META, *si))
+				(++ si, ++ length);
+	return (length);
+}
+
+static t_partnd	ft_particle_node(const char *const text)
+{
+	const t_particle	p = ft_particle(text);
+
+	if ((p.type == Particle_PlainText && p.plain_text == (char *){NULL})
+		|| (p.type == Particle_SingleQuote && p.single_quote == (char *){NULL})
+		|| (p.type == Particle_DoubleQuote
+			&& p.double_quote.q.type == Quark_SimpleText
+			&& p.double_quote.q.simple_text == (char *){NULL})
+		|| (p.type == Particle_Variable && p.variable.n == (char*){NULL}))
+		return ((t_partnd){{Particle_PlainText,
+			.plain_text = (char *){NULL}}, (t_partnd *){NULL}});
+	if (ft_strchr(META, text [ft__particle_cost(text)]))
+		NULL;
+	else
+		ft_particle_node(text);
+}
+
+static size_t	ft__particle_cost(const char *const s)
+{
+	if (*s == '\'')
+		return (ft__single_quote_cost());
+	else if (*s == '"')
+		//!FIXME: With missing characters, `strcspn`/`ft_find` has UB.
+		return (ft_find(s + 1, "\"") + 2);
+	else if (*s == '$' && s [1] == '?')
+		return (2);
+	else if (*s == '$' && (s [1] == '_' || ft_isalpha(s [1])))
+		///FIXME: `strspn`/`ft_span` UB when all match
+		return (1 + ft_span(s + 2, DIGIT CAPITAL "_" SMALL));
+	else if (*s == '\0' || ft_strchr(META, *s))
+		return (0);
+	else
+		return (ft_plain_cost());
+}
+
 ///A `Particle_PlainText` may have a `cost` of 0, this is no error.
 ///	In this case, the `plain_text` shall be the `""` empty string literal.
 ///		Remember, you shall not `free` a string literal!
@@ -195,33 +308,38 @@ static t_particle	ft_particle(const char *const text)
 			{ft_single_quote(text + 1)}, ft__single_quote_cost()});
 	else if (text [0] == '"')
 		return ((t_particle){Particle_DoubleQuote, .double_quote
-			= ft_double_quote(text + 1//, ft_find(text,"\"")
+			= ft_double_quote(text + 1//, ft_find(text,"\"") + ?
 			)});
 	else if (text [0] == '$' && text [1] == '?')
 		return ((t_particle){Particle_StatusParameter, {NEVER}, 2});
 	else if (text [0] == '$' && (ft_isalpha(text [1]) || text [1] == '_'))
-		ft_variable
-		((t_slice){text + 1, 1 + ft_span(text + 2, CAPITAL "_" SMALL)});
+		ft_variable((t_slice)
+			///FIXME: `strspn`/`ft_span` UB when all match
+			{text + 1, 1 + ft_span(text + 2, DIGIT CAPITAL "_" SMALL)});
 	//!Including `text [0] == '\0' | '\t' | '\n' | ' '`:
 	//!	plain text may have a length of zero.
-	else if (text [0] == '\0' || ft_span(text, "\t\n <>|") > 0)
+	else if (text [0] == '\0' || ft_strchr(META, text [0]) != (char *){NULL})
 		return ((t_particle){Particle_PlainText, {""}, 0});
 	//!Also if `text [0] == '$' && text [1] != 'A-Z' | 'a-z' | '_'`
 	return ((t_particle){Particle_PlainText, {ft_plain_text
-		((t_slice){text, ft_find(text, "\"$'" META)})}, ft_find(text, "\"$'" META)});
+		((t_slice){text, ft_plain_cost()//find(text, "\"$'" META)
+			})}, ft_plain_cost()//ft_find(text, "\"$'" META)
+		});
 }
 //__attribute__ ((alias ("ft_find")))
 //static size_t	ft__single_quote_cost();
+
 ///The `text` parameter shall point right **after** the opening `'\''` quote.
 ///Returns `NULL` on allocation error.
 static char	*ft_single_quote(const char *const text)
 {
-	///FIXME: `ft_find(text, "'")`
+	///FIXME: `ft_find(text, "'")` UB if none found
 	char *const	content = (char *)
 	{malloc((ft_find(content, "'") + 1) * sizeof * (char *){content})};
 
 	if (content == (char *){NULL})
 		return ((char *){NULL});
+	///FIXME: `ft_find(text, "'")` UB if none found
 	ft_copy_into(content, text, ft_find(text, "'"));
 	return (content);
 }

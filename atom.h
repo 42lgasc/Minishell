@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/15 12:07:26 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/15 17:33:24 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/16 22:24:27 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,16 @@ typedef bool	t_fail;
 # define OK		false
 # define ERROR	true
 
+///A BLank, as the `bash` manual states.
+# define 	BLANK		" \t"
+# define	DIGIT		"0123456789"
+# define	CAPITAL		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+# define	SMALL		"abcdefghijklmnopqrstuvwxyz"
+# define	NO_PLAIN	"\"$'"
+///A Metacharacter, as the `bash` manual states.
+///XXX: There is yet a requirement to not support some of such characters.
+# define	META		" \t\n|<>"	//" \t\n|&;()<>"
+
 ///Word Splitting only occurs where parameters are expund outside of quotes;
 ///	It is not the concern of non-parameter text and expansions within quotes.
 ///`Quark_Status` has no visible value in
@@ -38,14 +48,26 @@ typedef bool	t_fail;
 ///`simple_text` and `variable` will be `NULL` on error.
 typedef struct s_expansible
 {
-	const t_quark						quark;
+	const t_quark						q;
 	const struct s_expansible *const	next;
 }	t_param_expansible;
 typedef struct s_spring
 {
 	const t_param_expansible	expansible;
 	const size_t				cost;
-}	t_spring;
+}	t_spring	__attribute__	((deprecated));
+
+//enum e_here_word
+//{
+//};
+//typedef const struct s_here_word
+//{
+//	const enum e_here_word	type;
+//	const union
+//	{
+//		
+//	};
+//}	t_here_word;
 
 ///XXX: Single quotes and double quotes behave identically there.
 ///	Or don't they?	~~lgasc 2024-06-13 17:39
@@ -61,16 +83,17 @@ enum e_here_document
 ///		and `''ABC''DEF''`, both equivalent to `ABCDEF`).
 ///	TODO: Should the word of `<<''` have for representation
 ///		a `NULL` pointer or an `&'\0'` empty string?
-typedef struct s_here_document
+typedef const struct s_here_document
 {
-	enum e_here_document	type;
-	char					*word;
-	union
-	{
-		t_param_expansible	quoteless_document;
-		char				*quotsome_document;
-	};
-}				t_here_document;
+	const enum e_here_document	type;
+	const char *const			word;
+	//union
+	//{
+	//	t_param_expansible	quoteless_document;
+	//	char				*quotsome_document;
+	//};
+}	t_here_document;
+typedef	t_here_document	t_heredc;
 
 enum e_particle
 {
@@ -92,11 +115,13 @@ typedef struct s_particle
 	};
 	const size_t			cost;
 }				t_particle;
-typedef struct s_core
+typedef struct s_particle_node
 {
-	t_particle		particle;
-	struct s_core	*next;
-}	t_core;
+	t_particle				particle;
+	struct s_particle_node	*next;
+}	t_particle_node;
+typedef	t_particle_node	t_partnd;
+typedef	t_particle_node	t_core	__attribute__	((deprecated));
 
 enum e_atom
 {
@@ -136,11 +161,12 @@ typedef const struct s_atom
 		//char				*single_quote;
 		//t_param_expansible	*double_quote;
 		//t_name				variable;
-		const t_core			field;
-		const t_core			input_redirection;
-		const t_core			output_redirection;
-		const t_core			appending_redirection;
+		const t_partnd			field;
+		const t_partnd			input_redirection;
+		const t_partnd			output_redirection;
+		const t_partnd			appending_redirection;
 		const t_here_document	here_document;
+		const bool				error;
 	};
 }				t_atom;
 typedef struct s_bond
