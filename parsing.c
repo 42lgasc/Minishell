@@ -6,12 +6,10 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/13 19:42:43 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/16 22:21:38 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/18 06:15:00 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdlib.h>
 
 #include "libft/libft.h"
@@ -19,36 +17,41 @@
 #include "atom.h"
 #include "double_quote.h"
 
+void			ft_free_parse(t_parse p);
+static size_t	ft_atom_cost(const char *const s)
+				__attribute__	((nonnull,	warn_unused_result));
+static size_t	ft_here_word_cost(const char *const s)
+				__attribute__	((nonnull,	warn_unused_result));
+static t_atom	ft_atom(const char *s)
+				__attribute__	((nonnull,	warn_unused_result));
+static void		ft_free_atom(t_atom a);
+static t_atom	ft_error_atom(void)	__attribute__	((warn_unused_result));
 static t_heredc	ft_here_document(const char *text)
 				__attribute__	((nonnull,	warn_unused_result));
+static void		ft_free_heredoc(t_here_document h);
 static size_t	ft_here_word_length(const char *s)
 				__attribute__	((nonnull,	warn_unused_result));
-static t_core	ft_core(const char *text)
-				__attribute__	((alias	("ft_particle_node"),	deprecated));
-static t_partnd	ft_partnd(const char *text)
-				__attribute__	((alias	("ft_particle_node")));
-static t_partnd	ft_particle_node(const char *text)	__attribute__	((nonnull));
-static size_t	ft__particle_cost(const char *s)
+static t_ptclnd	ft_particle_node(const char *text)
 				__attribute__	((nonnull,	warn_unused_result));
-static t_particle	ft_particle(const char *s)
-					__attribute__	((nonnull,	warn_unused_result));
+static void		ft_0particle_node(t_particle_node n);
+static size_t	ft_particle_cost(const char *s)
+				__attribute__	((nonnull,	warn_unused_result));
+static t_ptcl	ft_particle(const char *s)
+				__attribute__	((nonnull,	warn_unused_result));
+static void		ft_0particle(t_particle p);
+static size_t	ft_plain_cost(const char *s)
+				__attribute__	((nonnull,	warn_unused_result));
 //static t_fail	ft_ready(t_cursor *const cursor, enum e_cursor depth)
 //				__attribute__		((warn_unused_result));
 //static void		ft_cleanup(void);
 static void		ft_copy_into(
 					char *destination, const char *source, size_t length);
-static t_param_expansible	ft_double_quote(const char *text)
-							__attribute__	((nonnull, warn_unused_result));
+static t_prmxpn	ft_double_quote(const char *text)
+				__attribute__	((nonnull, warn_unused_result));
 //static bool	ft_single_quote(char **const string, const char* text, size_t *i
 //					) __attribute__	((warn_unused_result, nonnull ( 3 , 2 ) ) );
 static char		*ft_single_quote(const char *const text)
 				__attribute__	((nonnull, warn_unused_result));
-//static void		ft_0expansible(t_param_expansible expansible);
-//static void		ft_0quark(t_quark quark);
-//static void		ft_0string(const char *string) __attribute__ ((alias ("free")));
-//static void		ft_0name(t_name name);
-static size_t	ft__single_quote_cost(void)
-				__attribute__ ((alias ("ft_find"), warn_unused_result));
 
 /*__attribute__ ((nonnull))
 t_bond	*ft_atomise(const char *const text)
@@ -115,8 +118,8 @@ t_bond	*ft_atomise(const char *const text)
 			//!i +> '?'
 		else if (text [start] != '_' && ! ft_isalpha(text [start]))
 		///Atom_PlainText
-			(**next) = (t_atom_node)
-			{Atom_PlainText, {{& (struct s_cluster){{(char [2]){'$', '\0'}, NULL}}}}, NULL};
+			(**next) = (t_atom_node){Atom_PlainText,
+				{{& (struct s_cluster){{(char [2]){'$', '\0'}, NULL}}}}, NULL};
 			//!i +> ~ ('A'..='Z' | '_' | 'a'..='z')
 		else
 		///Atom_Variable
@@ -157,8 +160,10 @@ t_bond	*ft_atomise(const char *const text)
 			{malloc(sizeof * (t_cluster){(**next).atom.input_redirection})};
 			if ((**next).atom.input_redirection == (t_cluster){NULL})
 				return (ft_cleanup());
-			* (**next).atom.input_redirection = (t_fragment){Fragment_SingleQuote, ft_single_quote, NULL};
-			if (ft_single_quote((**next).atom.input_redirection.single_quote, text, & i) == true) //!i +> ???
+			* (**next).atom.input_redirection
+				= (t_fragment){Fragment_SingleQuote, ft_single_quote, NULL};
+			if (ft_single_quote((**next).atom.input_redirection.single_quote,
+					text, & i) == true) //!i +> ???
 				return (ft_cleanup());
 			.input_redirection = string;
 		}
@@ -178,33 +183,152 @@ t_bond	*ft_atomise(const char *const text)
 		return (ft_cleanup());
 }*/
 
+///Shall `field.plain_text` be `NULL` on allocation error.
+__attribute__	((nonnull,	warn_unused_result))
+t_parse	ft_parse(const char *const s)
+{
+	t_parse *const	next = (t_parse *){malloc(sizeof * (t_parse *){next})};
+	const char		*si;
+	t_atom			a;
+
+	si = s + ft_span(s, BLANK);
+	if (*si == '\0')
+		return ((t_parse)
+			{{Atom_Field, .field = {{Particle_Plain, .plain = (char *){NULL}},
+					(t_ptclnd *){NULL}}}, (t_parse *){NULL}});
+	a = ft_atom(si);
+	if ((a.type == Atom_HereDocument && a.here_document.word == (char *){NULL})
+		|| (a.type == Atom_Input && a.input.p.type
+			== Particle_Plain && a.input.p.plain
+			== (char *){NULL}) || (a.type == Atom_Appending
+			&& a.appending.p.type == Particle_Plain
+			&& a.appending.p.plain == (char *){NULL})
+		|| (a.type == Atom_Output && a.output.p.type
+			== Particle_Plain && a.output.p.plain
+			== (char *){NULL}) || (a.type == Atom_Field && a.field.p.type
+			== Particle_Plain && a.field.p.plain == (char *){NULL}))
+		return (ft_free_atom(a), (t_parse){{Atom_Field, .field = {{
+						Particle_Plain, .plain = (char *){NULL}},
+				(t_ptclnd *){NULL}}}, (t_parse *){NULL}});
+	si += ft_atom_cost(si) + ft_span(s, BLANK);
+	if (*si == '\0')
+		return ((t_parse){a, (t_parse *){NULL}});
+	if (next == (t_parse *){NULL})
+		return (ft_free_atom(a), (t_parse){{Atom_Field, .field = {{
+						Particle_Plain, .plain = (char*){NULL}},
+				(t_ptclnd *){NULL}}}, (t_parse *){NULL}});
+	*next = ft_parse(si);
+	if (next->a.type == Atom_Field && next->a.field.p.type == Particle_Plain
+		&& next->a.field.p.plain == (char *){NULL})
+		return (ft_free_atom(a), ft_free_parse(*next), free((t_parse *){next}),
+(t_parse){{Atom_Field, .field = {{Particle_Plain, .plain = (char *){NULL}},
+(t_ptclnd *){NULL}}}, (t_parse *){NULL}});
+	return ((t_parse){a, next});
+}
+
+void	ft_free_parse(const t_parse p)
+{
+	ft_free_atom(p.a);
+	if (p.next != (t_parse *){NULL})
+		(ft_free_parse(*p.next), free((t_parse *){NULL}));
+}
+
+static size_t	ft_atom_cost(const char *const s)
+{
+	if (*s == '|')
+		return (1);
+	else if (*s == '<' && s [1] == '<')
+		return (2 + ft_span(s + 2, BLANK) + (s [2 + ft_span(s + 2, BLANK)]
+				!= '\0') * ft_here_word_cost(s + 2 + ft_span(s + 2, BLANK)));
+	else if (*s == '>' && s [1] == '>')
+		return (2 + ft_span(s + 2, BLANK)
+			+ ft_particle_cost(s + 2 + ft_span(s + 1, BLANK)));
+	else if (*s == '<' || *s == '>')
+		return (1 + ft_span(s + 1, BLANK)
+			+ ft_particle_cost(s + 1 + ft_span(s + 1, BLANK)));
+	else
+		return (ft_particle_cost(s));
+}
+
+static size_t	ft_here_word_cost(const char *const s)
+{
+	size_t	cost;
+
+	cost = 0;
+	while (s [cost] == '\0')
+	{
+		if (s [cost] == '\0')
+			return (cost);
+		else if (s [cost] == '"' && (++ cost, true))
+			while (s [cost] != '\0' && (s [cost] != '"' || (++ cost, false)))
+				++ cost;
+		else if (s [cost] == '\'' && (++ cost, true))
+			while (s [cost] != '\0' && (s [cost] != '\'' || (++ cost, false)))
+				++ cost;
+		else
+		{
+			cost += ft_find(s + cost, "\"'" METACHARACTER);
+			if (ft_strchr(METACHARACTER, s [cost]))
+				return (cost);
+		}
+	}
+	return (cost);
+}
+
 ///The `text` parameter shall point to the
 ///	first (non-blank) character of the atom.
-///The `here_document.word` shall be `NULL` on allocation error.
-static t_atom	ft_atom(const char *const text)
+///The `here_document.word`, `input_redirection.p.plain_text`,
+///	`appending_redirection.p.plain_text`, `output_redirection.p.plain_text`,
+///	or `field.p.plain_text` shall be `NULL` on allocation error.
+static t_atom	ft_atom(const char *const s)
 {
-	const char *const	ti = text;
+	t_atom	a;
 
-	if (*ti == '|')
-		return ((t_atom){Atom_Pipe, .error = false});
-	else if (*ti == '<' && ti [1] == '<')
-		return ((t_atom){Atom_HereDocument, .here_document
-			///FIXME: `strspn`/`ft_span` UB when all match
-			= ft_here_document(ti + 2 + ft_span(ti + 2, BLANK))});
-	else if (*ti == '<')
-		return ((t_atom){Atom_InputRedirection,
-			///FIXME: `strspn`/`ft_span` UB when all match
-			.input_redirection = ft_partnd(ti + 1 + ft_span(ti + 1, BLANK))});
-	else if (*ti == '>' && ti [1] == '>')
-		return ((t_atom){Atom_AppendingRedirection, .appending_redirection
-			///FIXME: `strspn`/`ft_span` UB when all match
-			= ft_partnd(ti + 2 + ft_span(ti + 2, BLANK))});
-	else if (*ti == '>')
-		return ((t_atom){Atom_OutputRedirection,
-			///FIXME: `strspn`/`ft_span` UB when all match
-			.output_redirection = ft_partnd(ti + 1 + ft_span(ti + 1, BLANK))});
-	else
-		return ((t_atom){Atom_Field, .field = ft_partnd(ti)});
+	if (*s == '|')
+		return ((t_atom)
+			{Atom_Pipe, {{{Particle_Plain, {NEVER}}, (t_ptclnd *){NULL}}}});
+	else if (*s == '<' && s [1] == '<')
+		a = (t_atom){Atom_HereDocument,
+			.here_document = ft_here_document(s + 2 + ft_span(s + 2, BLANK))};
+	else if (*s == '<')
+		a = (t_atom)
+		{Atom_Input, .input = ft_particle_node(s + 1 + ft_span(s + 1, BLANK))};
+	else if (*s == '>' && s [1] == '>')
+		a = (t_atom){Atom_Appending,
+			.appending = ft_particle_node(s + 2 + ft_span(s + 2, BLANK))};
+	else if (*s == '>')
+		a = (t_atom){Atom_Output,
+			.output = ft_particle_node(s + 1 + ft_span(s + 1, BLANK))};
+	if ((*s == '<' && s [1] == '<' && a.here_document.word == (char *){NULL})
+		|| (*s == '<' && s [1] != '<' && a.input.p.type == Particle_Plain && a
+			.input.p.plain == (char *){NULL}) || (*s == '>' && s[1] == '>' && a
+			.appending.p.type == Particle_Plain && a.appending.p.plain
+			== (char *){NULL}) || (*s == '>' && s [1] != '>' && a.output.p.type
+			== Particle_Plain && a.output.p.plain == (char *){NULL}))
+		return (ft_free_atom(a), ft_error_atom());
+	else if (*s != '<' && *s != '>')
+		a = (t_atom){Atom_Field, .field = ft_particle_node(s)};
+	return (a);
+}
+
+static void	ft_free_atom(const t_atom a)
+{
+	if (a.type == Atom_Field)
+		ft_0particle_node(a.field);
+	else if (a.type == Atom_Input)
+		ft_0particle_node(a.input);
+	else if (a.type == Atom_Output)
+		ft_0particle_node(a.output);
+	else if (a.type == Atom_Appending)
+		ft_0particle_node(a.appending);
+	else if (a.type == Atom_HereDocument)
+		ft_free_heredoc(a.here_document);
+}
+
+static t_atom	ft_error_atom(void)
+{
+	return ((t_atom){Atom_Field, .field
+		= {{Particle_Plain, .plain = (char *){NULL}}, (t_ptclnd *){NULL}}});
 }
 
 ///The `delimiter` may be the empty string. (It then matches an empty line.)
@@ -224,8 +348,7 @@ static t_heredc	ft_here_document(const char *const text)
 	quote = HereDocument_Quoteless;
 	ti = text;
 	wi = word;
-	while (*ti != '\0' && ! ft_strchr(META, *ti))
-		//if (text [0] == '\\') {quote = true; ...} else
+	while (*ti != '\0' && ! ft_strchr(METACHARACTER, *ti))
 		if (quote == HereDocument_Quoteless && (*ti == '"' || *ti == '\''))
 			quote = HereDocument_Quotesome;
 	else if (*ti == '"')
@@ -235,10 +358,16 @@ static t_heredc	ft_here_document(const char *const text)
 		while (*++ ti != '\0' && (*ti != '\'' || (++ ti, false)))
 			*wi ++ = *ti;
 	else
-		while (*ti != '\0' && ! ft_strchr("\"'" META, *ti))
+		while (*ti != '\0' && ! ft_strchr("\"'" METACHARACTER, *ti))
 			*wi ++ = *ti ++;
 	*wi = '\0';
 	return ((t_heredc){quote, word});
+}
+
+static void	ft_free_heredoc(t_here_document h)
+{
+	if (h.word != (char *){NULL})
+		free((char *){h.word});
 }
 
 static size_t	ft_here_word_length(const char *const s)
@@ -248,98 +377,131 @@ static size_t	ft_here_word_length(const char *const s)
 
 	length = 0;
 	si = s;
-	while (*si != '\0' && ! ft_strchr("\"'" META, *si))
+	while (*si != '\0' && ! ft_strchr("\"'" METACHARACTER, *si))
 		if (*si == '"')
 			while (*++ si != '\0' && (*si != '"' || (++ si, false)))
 				++ length;
-		else if (*si == '\'')
-			while (*++ si != '\0' && (*si != '\'' || (++ si, false)))
-				++ length;
-		else
-			while (*si != '\0' && ! ft_strchr("\"'" META, *si))
-				(++ si, ++ length);
+	else if (*si == '\'')
+		while (*++ si != '\0' && (*si != '\'' || (++ si, false)))
+			++ length;
+	else
+		while (*si != '\0' && ! ft_strchr("\"'" METACHARACTER, *si))
+			length += (++ si, 1);
 	return (length);
 }
 
-static t_partnd	ft_particle_node(const char *const text)
+///The `plain_text` shall be `NULL` on allocation error.
+static t_ptclnd	ft_particle_node(const char *const text)
 {
-	const t_particle	p = ft_particle(text);
+	const t_particle		p = ft_particle(text);
+	t_particle_node *const	next
+		= (t_ptclnd *){malloc(sizeof * (t_ptclnd *){next})};
 
-	if ((p.type == Particle_PlainText && p.plain_text == (char *){NULL})
+	if ((ft_strchr(METACHARACTER, text [ft_particle_cost(text)])
+			&& next == (t_ptclnd *){NULL})
+		|| (p.type == Particle_Plain && p.plain == (char *){NULL})
 		|| (p.type == Particle_SingleQuote && p.single_quote == (char *){NULL})
-		|| (p.type == Particle_DoubleQuote
-			&& p.double_quote.q.type == Quark_SimpleText
-			&& p.double_quote.q.simple_text == (char *){NULL})
+		|| (p.type == Particle_DoubleQuote && p.double_quote.q.type
+			== Quark_Simple && p.double_quote.q.simple == (char *){NULL})
 		|| (p.type == Particle_Variable && p.variable.n == (char*){NULL}))
-		return ((t_partnd){{Particle_PlainText,
-			.plain_text = (char *){NULL}}, (t_partnd *){NULL}});
-	if (ft_strchr(META, text [ft__particle_cost(text)]))
-		NULL;
-	else
-		ft_particle_node(text);
+		return (ft_0particle(p), free((t_ptclnd *){next}), (t_ptclnd){{
+			Particle_Plain, .plain = (char *){NULL}}, (t_ptclnd *){NULL}});
+	if (ft_strchr(METACHARACTER, text [ft_particle_cost(text)]))
+		return ((t_ptclnd){p, (t_ptclnd *){NULL}});
+	*next = ft_particle_node(text + ft_particle_cost(text));
+	if (next->p.type == Particle_Plain && next->p.plain == (char *){NULL})
+		return (ft_0particle(p), ft_0particle_node(*next),
+			free((t_ptclnd *){next}), (t_ptclnd){{Particle_Plain,
+			.plain = (char *){NULL}}, (t_ptclnd *){NULL}});
+	return ((t_ptclnd){p, next});
 }
 
-static size_t	ft__particle_cost(const char *const s)
+static void	ft_0particle_node(const t_particle_node n)
+{
+	ft_0particle(n.p);
+	if (n.next != (t_particle_node *){NULL})
+		(ft_0particle_node(*n.next), free((t_particle_node *){n.next}));
+}
+
+static size_t	ft_particle_cost(const char *const s)
 {
 	if (*s == '\'')
-		return (ft__single_quote_cost());
+		return (1 + ft_find(s + 1, "'") + 1);
 	else if (*s == '"')
-		//!FIXME: With missing characters, `strcspn`/`ft_find` has UB.
-		return (ft_find(s + 1, "\"") + 2);
+		return (1 + ft_find(s + 1, "\"") + 1);
 	else if (*s == '$' && s [1] == '?')
 		return (2);
 	else if (*s == '$' && (s [1] == '_' || ft_isalpha(s [1])))
-		///FIXME: `strspn`/`ft_span` UB when all match
 		return (1 + ft_span(s + 2, DIGIT CAPITAL "_" SMALL));
-	else if (*s == '\0' || ft_strchr(META, *s))
+	else if (*s == '\0' || ft_strchr(METACHARACTER, *s))
 		return (0);
 	else
-		return (ft_plain_cost());
+		return (ft_plain_cost(s));
 }
 
 ///A `Particle_PlainText` may have a `cost` of 0, this is no error.
 ///	In this case, the `plain_text` shall be the `""` empty string literal.
 ///		Remember, you shall not `free` a string literal!
 ///TODO: Separate: There should be a separate function to count the cost.
+///TODO: `plain_text` should absorb surrounding non-parameter `'$'`;
+///	this currently produce consecutive `plain_text` from
+///	text such as `"abc$+de"` (`"abc"`, `"$"`, and `"de"`)
+///	while the result should be a single `plain_text`.
+//else // Also if `text [0] == '$' && text [1] != 'A-Z' | 'a-z' | '_'`
 static t_particle	ft_particle(const char *const text)
 {
 	if (text [0] == '\'')
 		return ((t_particle){Particle_SingleQuote,
-			{ft_single_quote(text + 1)}, ft__single_quote_cost()});
+			{ft_single_quote(text + 1)}, //1 + ft_find(text + 1, "'") + 1
+		});
 	else if (text [0] == '"')
 		return ((t_particle){Particle_DoubleQuote, .double_quote
 			= ft_double_quote(text + 1//, ft_find(text,"\"") + ?
 			)});
 	else if (text [0] == '$' && text [1] == '?')
-		return ((t_particle){Particle_StatusParameter, {NEVER}, 2});
+		return ((t_particle){Particle_StatusParameter, {NEVER}});
 	else if (text [0] == '$' && (ft_isalpha(text [1]) || text [1] == '_'))
 		ft_variable((t_slice)
 			///FIXME: `strspn`/`ft_span` UB when all match
-			{text + 1, 1 + ft_span(text + 2, DIGIT CAPITAL "_" SMALL)});
-	//!Including `text [0] == '\0' | '\t' | '\n' | ' '`:
-	//!	plain text may have a length of zero.
-	else if (text [0] == '\0' || ft_strchr(META, text [0]) != (char *){NULL})
-		return ((t_particle){Particle_PlainText, {""}, 0});
-	//!Also if `text [0] == '$' && text [1] != 'A-Z' | 'a-z' | '_'`
-	return ((t_particle){Particle_PlainText, {ft_plain_text
-		((t_slice){text, ft_plain_cost()//find(text, "\"$'" META)
-			})}, ft_plain_cost()//ft_find(text, "\"$'" META)
-		});
+		{text + 1, 1 + ft_span(text + 2, DIGIT CAPITAL "_" SMALL)});
+	else if (text [0] == '\0'
+		|| ft_strchr(METACHARACTER, text [0]) != (char *){NULL})
+		return ((t_particle){Particle_Plain, {""}});
+	return ((t_particle){
+		Particle_Plain, {ft_plain_text((t_slice){text, ft_plain_cost(text)})}});
+}
+
+static void	ft_0particle(const t_particle p)
+{
+	if (p.type == Particle_Plain && p.plain != (char *){""})
+		free((char *){p.plain});
+	else if (p.type == Particle_SingleQuote && p.single_quote != (char *){""})
+		free((char *){p.single_quote});
+	else if (p.type == Particle_DoubleQuote)
+		ft_0expansible(p.double_quote);
+	else if (p.type == Particle_Variable)
+		ft_0name(p.variable);
 }
 //__attribute__ ((alias ("ft_find")))
 //static size_t	ft__single_quote_cost();
+
+///For the scope of this `minishell` project, there
+///	is no support for the `'\\'` Escape Character.
+static size_t	ft_plain_cost(const char *const s)
+{
+	return (ft_find(s, "\"$'" METACHARACTER));
+}
 
 ///The `text` parameter shall point right **after** the opening `'\''` quote.
 ///Returns `NULL` on allocation error.
 static char	*ft_single_quote(const char *const text)
 {
-	///FIXME: `ft_find(text, "'")` UB if none found
 	char *const	content = (char *)
-	{malloc((ft_find(content, "'") + 1) * sizeof * (char *){content})};
+		///FIXME: `ft_find(text, "'")` UB if none found
+	{malloc((ft_find(text, "'") + 1) * sizeof * (char *){content})};
 
 	if (content == (char *){NULL})
 		return ((char *){NULL});
-	///FIXME: `ft_find(text, "'")` UB if none found
 	ft_copy_into(content, text, ft_find(text, "'"));
 	return (content);
 }
@@ -429,53 +591,17 @@ static void	ft_copy_into(char *const restrict destination,
 	destination [i] = '\0';
 }
 
-
 ///The `text` parameter shall point _after_ the `'"'` opening double quote.
 ///As a mean of error propagation, `expansible.simple_text`
 ///	and `expansible.variable` may be `NULL`.
 ///TODO: Separate: There should be a separate function to count the cost.
 static t_param_expansible	ft_double_quote(const char *const text)
 {
-	const t_wish					wish = ft_wish(text);
-	const t_param_expansible		double_quote = ft_param_expansible(wish);
-	//const t_param_expansible *const	next; //= ft_next();
+	const t_param_expansible		double_quote = ft_param_expansible(text);
 
-	//if (wish.quark.type == Quark_SimpleText && wish.cost == 0)
-	//	return ((t_spring){double_quote, 0});
-	//ft_probe(text + wish.cost);
-	//next = ft_double_quote(text + wish.cost, length - wish.cost);
-	//if (next.cost == 0)
-	//	return (ft_0spring(next), (t_spring){double_quote, wish.cost});
-	//double_quote.next = next.expansible;
-	//return ((t_spring)
-	//	{{double_quote, next.expansible}, wish.quark.cost + next.cost});
 	return (double_quote);
 }
-
-//void	ft_0expansible(const t_param_expansible expansible)
-//{
-//	ft_0quark(expansible.quark);
-//	if (expansible.next != (t_param_expansible *){NULL})
-//		(ft_0expansible(*expansible.next), free((t_param_expansible *const)
-//				(const t_param_expansible *const){expansible.next}));
-//}
-
-//static void	ft_0quark(const t_quark quark)
-//{
-//	if (quark.type == Quark_SimpleText)
-//		ft_0string(quark.simple_text);
-//	else if (quark.type == Quark_Status)
-//		ft_noop();
-//	else if (quark.type == Quark_Variable)
-//		ft_0name(quark.variable);
-//}
 //{free((char *){string});}
-
-//void	ft_0name(const t_name name)
-//{
-//	if (name.n != (char *){NULL})
-//		ft_0string(name.n);
-//}
 
 //\///If the allocation fails, the return is `NULL`
 //static char	*ft_single_quote(const char *const text, size_t *const i)

@@ -6,45 +6,52 @@
 #    By: lgasc <marvin@42.fr>                       +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/05/08 18:19:19 by lgasc             #+#    #+#              #
-#    Updated: 2024/07/14 21:11:27 by lgasc            ###   ########.fr        #
+#    Updated: 2024/07/18 06:29:48 by lgasc            ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
-NAME	= minishell
+NAME			= minishell
 
-SOURCES	= $(NAME).c parsing.c #double_quote.c
+SOURCES			= $(NAME).c parsing.c double_quote.c
 
-LIBFT	= 
+LIBFT			= libft/libft.a
 
-OBJECTS	= $(SOURCES:.c=.o) $(LIB_ARCHIVES)
+LIB_ARCHIVES	= $(LIBFT)
+
+OBJECTS			= $(SOURCES:.c=.o) $(LIB_ARCHIVES)
 
 
-CFLAGS	+= -Wmissing-noreturn -Werror -Wpedantic	\
-	-Wnull-dereference -Wstrict-overflow=5 -Wall	\
-	-Wattributes -Wmissing-format-attribute			\
+CFLAGS			+= -Wall -Wmissing-noreturn -Werror		\
+	-Wnull-dereference -Wstrict-overflow=5 -Wpedantic	\
+	-Wattributes -Wmissing-format-attribute -Wnonnull	\
 	-Wextra #-Wsuggest-attribute=returns_nonnull
+
 ifeq ($(CC), gcc)
-CFLAGS += -Wduplicated-cond -Wsuggest-attribute=const	\
+CFLAGS			+= -Wduplicated-cond -Wsuggest-attribute=const	\
 	-Wsuggest-attribute=cold -Wsuggest-attribute=pure	\
 	-Wduplicated-branches -Wsuggest-attribute=format	\
 	-Wattribute-alias=2 -Wsuggest-attribute=noreturn	\
 	-Wsuggest-attribute=malloc -Wstringop-overflow=4
+
 else ifeq ($(CC), clang)
-CFLAGS += -Wproperty-attribute-mismatch
+CFLAGS			+= -Wproperty-attribute-mismatch
 endif
 
-LDLIBS	+= -lreadline
+LDLIBS			+= -lreadline
 
 
 
 .PHONY:	all re clean fclean	debug test
 
-$(NAME):	$(OBJECTS)
-	-grep 'TODO\|FIXME\|XXX\|?\|!!\|DEPREC\w*\|[Dd]eprec\w*' -r .
-
 all:		$(NAME)
 
+$(NAME):	$(OBJECTS)
+	$(CC) $(OBJECTS) $(LDLIBS) --output $(NAME)
+	norminette
+	-grep 'TODO\|FIXME\|XXX\|?\|!!\|DEPREC\w*\|[Dd]eprec\w*' -r .
+
 clean:		
+	$(MAKE) -C $(dir $(LIBFT)) fclean
 	for O in $(OBJECTS);	\
 		do if [ -f $$O ];		\
 			then rm $$O;		\
@@ -57,7 +64,8 @@ fclean:		clean
 
 re:			fclean all
 
-
+$(LIBFT):	
+	$(MAKE) -C $(dir $@) #bonus
 
 # Use `CC=...` instead.
 #test:		$(OBJECTS)

@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/15 12:07:26 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/16 22:24:27 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/18 05:50:58 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,45 +17,19 @@
 
 # include "quark.h"
 
-///Explicit discard with `VOID`:
-///	Use of `NULL` may indicate a field as incomplete, as awaiting for a value.
-///	`NEVER` marks a field as "complete" - such pointer shall have no use.
-///	`DIRT` acts as an _explicit_ placeholder value. Dirty!
-# define NEVER	NULL
-# define VOID	NEVER	//!Depreciated: Rename to `NEVER`.
-# define IVOID	-1		//!Depreciated; maybe use `(int)VOID`?
-# define DIRT	NULL	//!Depreciated
-
-typedef bool	t_fail;
-# define OK		false
-# define ERROR	true
+typedef bool				t_fail	__attribute__	((deprecated));
+//# define OK		false
+//# define ERROR	true
 
 ///A BLank, as the `bash` manual states.
-# define 	BLANK		" \t"
-# define	DIGIT		"0123456789"
-# define	CAPITAL		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-# define	SMALL		"abcdefghijklmnopqrstuvwxyz"
-# define	NO_PLAIN	"\"$'"
+# define BLANK			" \t"
+# define DIGIT			"0123456789"
+# define CAPITAL			"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+# define SMALL			"abcdefghijklmnopqrstuvwxyz"
+# define NO_PLAIN		"\"$'"
 ///A Metacharacter, as the `bash` manual states.
 ///XXX: There is yet a requirement to not support some of such characters.
-# define	META		" \t\n|<>"	//" \t\n|&;()<>"
-
-///Word Splitting only occurs where parameters are expund outside of quotes;
-///	It is not the concern of non-parameter text and expansions within quotes.
-///`Quark_Status` has no visible value in
-///	the `union` as it is a unitary marker.
-///`simple_text` may be empty ({'\0'}) and thus have a `cost` of `0`.
-///`simple_text` and `variable` will be `NULL` on error.
-typedef struct s_expansible
-{
-	const t_quark						q;
-	const struct s_expansible *const	next;
-}	t_param_expansible;
-typedef struct s_spring
-{
-	const t_param_expansible	expansible;
-	const size_t				cost;
-}	t_spring	__attribute__	((deprecated));
+# define METACHARACTER	" \t\n|<>"	//" \t\n|&;()<>"
 
 //enum e_here_word
 //{
@@ -83,21 +57,16 @@ enum e_here_document
 ///		and `''ABC''DEF''`, both equivalent to `ABCDEF`).
 ///	TODO: Should the word of `<<''` have for representation
 ///		a `NULL` pointer or an `&'\0'` empty string?
-typedef const struct s_here_document
+typedef struct s_here_document
 {
-	const enum e_here_document	type;
-	const char *const			word;
-	//union
-	//{
-	//	t_param_expansible	quoteless_document;
-	//	char				*quotsome_document;
-	//};
+	enum e_here_document	type;
+	char					*word;
 }	t_here_document;
-typedef	t_here_document	t_heredc;
+typedef t_here_document		t_heredc;
 
 enum e_particle
 {
-	Particle_PlainText,
+	Particle_Plain,
 	Particle_SingleQuote,
 	Particle_DoubleQuote,
 	Particle_Variable,
@@ -105,37 +74,31 @@ enum e_particle
 };
 typedef struct s_particle
 {
-	const enum e_particle	type;
-	const union
+	enum e_particle	type;
+	union
 	{
-		const char *const			plain_text;
-		const char *const			single_quote;
-		const t_param_expansible	double_quote;
-		const t_name				variable;
+		char				*plain;
+		char				*single_quote;
+		t_param_expansible	double_quote;
+		t_name				variable;
 	};
-	const size_t			cost;
 }				t_particle;
+typedef t_particle			t_ptcl;
 typedef struct s_particle_node
 {
-	t_particle				particle;
+	t_particle				p;
 	struct s_particle_node	*next;
 }	t_particle_node;
-typedef	t_particle_node	t_partnd;
-typedef	t_particle_node	t_core	__attribute__	((deprecated));
+typedef t_particle_node		t_ptclnd;
+typedef t_particle_node		t_core	__attribute__	((deprecated));
 
 enum e_atom
 {
-	//Atom_Blank,
-	//Atom_PlainText,
-	//Atom_SingleQuote,
-	//Atom_DoubleQuote,
-	//Atom_Variable,
-	//Atom_StatusParameter,
 	Atom_Field,
-	Atom_InputRedirection,
-	Atom_OutputRedirection,
+	Atom_Input,
+	Atom_Output,
 	Atom_HereDocument,
-	Atom_AppendingRedirection,
+	Atom_Appending,
 	Atom_Pipe,
 };
 // A collation of `plain_text`, `single_quote`, `double_quote`, and `variable`:
@@ -152,29 +115,23 @@ enum e_atom
 ///		for the scope of this "minishell" project.
 ///`Blank`, `Pipe`, and `StatusParameter` have no visible
 ///	value in the `union` as they are unitary markers.
-typedef const struct s_atom
+typedef struct s_atom
 {
-	const enum e_atom	type;
-	const union
+	enum e_atom	type;
+	union
 	{
-		//char				*plain_text;
-		//char				*single_quote;
-		//t_param_expansible	*double_quote;
-		//t_name				variable;
-		const t_partnd			field;
-		const t_partnd			input_redirection;
-		const t_partnd			output_redirection;
-		const t_partnd			appending_redirection;
-		const t_here_document	here_document;
-		const bool				error;
+		t_particle_node	field;
+		t_particle_node	input;
+		t_particle_node	output;
+		t_particle_node	appending;
+		t_here_document	here_document;
 	};
 }				t_atom;
 typedef struct s_bond
 {
-	t_atom			atom;
+	t_atom			a;
 	struct s_bond	*next;
-}				t_bond;
-//typedef t_bond	*t_molecule __attribute__ ((deprecated));
+}				t_parse;
 
 enum e_cursor
 {
@@ -183,17 +140,10 @@ enum e_cursor
 };
 typedef struct s_cursor
 {
-	t_bond	**bond; //!`t_bond &`, not `t_molecule`
+	t_parse	**p;
 	union
-	///Depending on the molecule/atom type
 	{
-	//	struct
-	//	{
 		t_slice	**slice;
-	//		//union
-	//		//\///Depending on the cluster/fragment type
-	//		//{};
-	//	};
 	};
-}	t_cursor;
+}	t_cursor	__attribute__	((deprecated));
 #endif
