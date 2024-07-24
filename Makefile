@@ -6,13 +6,14 @@
 #    By: lgasc <marvin@42.fr>                       +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/05/08 18:19:19 by lgasc             #+#    #+#              #
-#    Updated: 2024/07/18 06:29:48 by lgasc            ###   ########.fr        #
+#    Updated: 2024/07/24 21:51:38 by lgasc            ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME			= minishell
 
-SOURCES			= $(NAME).c parsing.c double_quote.c
+SOURCES			= $(NAME).c parsing.c \
+	atom.c double_quote.c here_document.c particle.c quark.c miscellaneous.c
 
 LIBFT			= libft/libft.a
 
@@ -46,9 +47,10 @@ LDLIBS			+= -lreadline
 all:		$(NAME)
 
 $(NAME):	$(OBJECTS)
-	$(CC) $(OBJECTS) $(LDLIBS) --output $(NAME)
+	$(CC) -g $(OBJECTS) $(LDLIBS) --output $(NAME)
 	norminette
-	-grep 'TODO\|FIXME\|XXX\|?\|!!\|DEPREC\w*\|[Dd]eprec\w*' -r .
+	-grep 'TODO\|FIXME\|XXX\|?\|!!\|DEPREC\w*\|[Dd]eprec\w*' \
+		--recursive . --include=\*.[ch] --colour=auto
 
 clean:		
 	$(MAKE) -C $(dir $(LIBFT)) fclean
