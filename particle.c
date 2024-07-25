@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/24 19:19:44 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/24 20:36:15 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/25 18:46:50 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,7 +55,6 @@ void	ft_free_particle_node(const t_particle_node n)
 ///A `Particle_PlainText` may have a `cost` of 0, this is no error.
 ///	In this case, the `plain_text` shall be the `""` empty string literal.
 ///		Remember, you shall not `free` a string literal!
-///TODO: Separate: There should be a separate function to count the cost.
 ///TODO: `plain_text` should absorb surrounding non-parameter `'$'`;
 ///	this currently produce consecutive `plain_text` from
 ///	text such as `"abc$+de"` (`"abc"`, `"$"`, and `"de"`)
@@ -75,8 +74,8 @@ t_particle	ft_particle(const char *const text)
 	else if (text [0] == '$' && text [1] == '?')
 		return ((t_particle){Particle_StatusParameter, {NEVER}});
 	else if (text [0] == '$' && (ft_isalpha(text [1]) || text [1] == '_'))
-		return ((t_particle){Particle_Variable, .variable = ft_variable
-			((t_slice) ///FIXME: `strspn`/`ft_span` UB when all match
+		return (
+			(t_particle){Particle_Variable, .variable = ft_variable((t_slice)
 				{text + 1, 1 + ft_span(text + 2, DIGIT CAPITAL "_" SMALL)})});
 	else if (text [0] == '\0'
 		|| ft_strchr(METACHARACTER, text [0]) != (char *){NULL})

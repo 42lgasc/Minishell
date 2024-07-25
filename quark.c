@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/24 20:04:40 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/24 21:23:54 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/25 12:41:47 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,8 +17,6 @@
 ///The `text` parameter shall point _after_ the `'"'` opening double quote.
 ///On error, `simple_text` and `variable` will be `NULL`.
 ///It is no error for `simple_text` to have a length of `0`.
-///TODO: Separate: There should be different functions for
-///	identifying type, counting cost, and assembling the structure.
 __attribute__	((nonnull,	warn_unused_result))
 t_wish	ft_wish(const char *const text)
 {

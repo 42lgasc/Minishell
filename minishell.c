@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/08 17:56:14 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/18 03:21:08 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/25 18:49:10 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,59 +49,3 @@ int	main(void)
 		ft_free_parse(parse);
 	}
 }
-
-/*static void ft_break__obeing_quoting__sep_token_by_metachar__alias_expansion
-	(const char *const line)
-{
-	size_t	i;
-	
-
-	if (line == NULL)
-		return ;
-	i = 0;
-	while (line [i] != '\0')
-		;
-	// FIXME: Group together `quote == None` conditions.
-	//if (quote == None && line [i] == '\\')
-	//	quote = Escape;
-	//else if (quote == Escape)
-	//	if (line [i] == '\n')
-	//		quote = (ft_line_continuation(), None);
-	//	else
-	//		quote = (ft_preserve(), None);
-	else if (quote == None && line [i] = '\'')
-		quote = Single;
-	else if (quote == Single)
-		if (line [i] == '\'')
-			quote = None;
-		else
-			ft_preserve();
-	else if (quote == None && line [i] == '\"')
-		quote = Double;
-	else if (quote == Double)
-		if (line [i] == '$')
-			quote == DoubleParameter; // TODO: SEE: Shell Expansions
-		//else if (line [i] == '`' '\\' '!')
-		else if (line [i] == '"')
-			quote == None;
-		else
-			ft_preserve();
-	else
-		ft_handle_unquoted();
-}*/
-
-/*static void	f_parse(void)
-{
-	const enum e_atom	quote_here;
-	const enum e_atom	last_atom;
-
-	//...
-	
-	//if (quote_here == NoQuote)
-	if (quote_here == SingleQuote || quote_here == DoubleQuote
-		|| last_atom == InputRedirection || last_atom == OutputRedirection
-		|| quote_here == HereDocument && not (
-			//Here Document end
-			) || last_atom == AppendingRedirection || last_atom == Pipe)
-		return (partial_parse); // More line reading required...
-}*/

@@ -6,7 +6,7 @@
 #    By: lgasc <marvin@42.fr>                       +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/05/08 18:19:19 by lgasc             #+#    #+#              #
-#    Updated: 2024/07/25 11:49:09 by lgasc            ###   ########.fr        #
+#    Updated: 2024/07/25 18:43:03 by lgasc            ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -50,7 +50,7 @@ $(NAME):	$(OBJECTS)
 	$(CC) -g $(OBJECTS) $(LDLIBS) --output $(NAME)
 	norminette
 	-grep -P 'TODO|FIXME|XXX|(?<!'\'')\?|\?(?!'\'')|!!|DEPREC\w*|[Dd]eprec\w*' \
-		--recursive . --include=\*.[ch] --colour=auto
+		--recursive . --include=\*.[ch] --line-number --colour=auto
 
 clean:		
 	$(MAKE) -C $(dir $(LIBFT)) fclean

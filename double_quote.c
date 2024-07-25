@@ -6,7 +6,7 @@
 /*   By: lgasc <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/19 20:59:45 by lgasc             #+#    #+#             */
-/*   Updated: 2024/07/24 22:01:40 by lgasc            ###   ########.fr       */
+/*   Updated: 2024/07/25 12:42:09 by lgasc            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,6 @@ static t_prmxpn	*ft_next(const char *const text)
 ///The `text` parameter shall point _after_ the `'"'` opening double quote.
 ///As a mean of error propagation, `expansible.simple_text`
 ///	and `expansible.variable` may be `NULL`.
-///TODO: Separate: There should be a separate function to count the cost.
 __attribute__	((nonnull,	warn_unused_result))
 t_param_expansible	ft_double_quote(const char *const text)
 {
